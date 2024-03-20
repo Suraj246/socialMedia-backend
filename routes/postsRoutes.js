@@ -16,7 +16,8 @@ postRoutes.post("/create", upload.single("image"), async (req, res) => {
         const new_post = await post.save();
         if (new_post) {
             const store = await posts.updateOne({ _id: new_post._id }, { $addToSet: { user: userId } });
-            // console.log(store)
+
+
             if (store) {
                 return res.status(201).json({ success: "user stored", new_post });
             }
@@ -54,8 +55,9 @@ postRoutes.get('/posts', async (req, res) => {
     }
 })
 //  posts likes
+
 postRoutes.put("/like/:id", async (req, res) => {
-    const { userId } = req.body
+    const { userId } = req.body;
 
     try {
         const post = await posts.findById(req.params.id);
@@ -66,15 +68,43 @@ postRoutes.put("/like/:id", async (req, res) => {
         const liked = post.likes.includes(userId);
         if (liked) {
             await posts.findByIdAndUpdate(req.params.id, { $pull: { likes: userId } }, { new: true });
-            return res.status(201).json({ success: "disliked" });
+            // Fetch updated post data after the like is removed
+            const updatedPost = await posts.find({}).populate([{
+                path: 'user',
+                model: 'user'
+            },
+            {
+                path: 'comments',
+                model: 'comment',
+                populate: { path: "users", select: 'username image createdAt' }
+
+            }
+            ])
+            // const updatedPost = await posts.findById(req.params.id);
+            return res.status(201).json({ success: "disliked", post: updatedPost });
         } else {
             await posts.findByIdAndUpdate(req.params.id, { $addToSet: { likes: userId } }, { new: true });
-            return res.status(201).json({ success: "liked" });
+            // Fetch updated post data after the like is added
+            // const updatedPost = await posts.findById(req.params.id);
+            const updatedPost = await posts.find({}).populate([{
+                path: 'user',
+                model: 'user'
+            },
+            {
+                path: 'comments',
+                model: 'comment',
+                populate: { path: "users", select: 'username image createdAt' }
+
+            }
+            ])
+
+            return res.status(201).json({ success: "liked", post: updatedPost });
         }
     } catch (err) {
         return res.status(500).json({ message: "Server error" });
     }
-})
+});
+
 
 //user delete post
 postRoutes.delete('/:id/:postId/:post_index', async (req, res) => {
@@ -95,7 +125,7 @@ postRoutes.delete('/:id/:postId/:post_index', async (req, res) => {
                 )
                 posts.findByIdAndDelete({ _id: postId })
                     .then((result) => {
-                        res.status(200).send({ message: "user", result })
+                        res.status(200).send({ message: "post deleted", result })
                     })
             })
 

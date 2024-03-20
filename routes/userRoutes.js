@@ -22,7 +22,7 @@ userRouter.post("/signup", async (req, res) => {
             return res.status(201).json({ success: "user successfully created" });
         }
     } catch (err) {
-        return res.status(422).json({ message: "error" });
+        return res.status(422).json({ message: "error", err });
     }
 })
 
@@ -71,17 +71,17 @@ userRouter.get('/get-data/:id', async (req, res) => {
             res.status(404).send({ message: "Product failed" });
         }
     } catch (error) {
-        console.log(error);
         res.status(500).send({ message: "server error", error });
     }
 })
 
 userRouter.put('/update/:id', verifyToken, upload.single("image"), async (req, res) => {
+
+    const username = req.body.username
     const location = req.body.location
     const image = req.file && req.file.filename
-
     try {
-        const updateUser = await newUser.findByIdAndUpdate({ _id: req.params.id }, { location: location, image: image }, { new: true });
+        const updateUser = await newUser.findByIdAndUpdate({ _id: req.params.id }, { username: username, location: location, image: image }, { new: true });
         if (updateUser) {
             return res.status(201).json({ success: "user updated", updateUser });
         }
@@ -113,8 +113,14 @@ userRouter.put("/posts/:id", async (req, res) => {
 userRouter.get("/:id", async (req, res) => {
 
     try {
-        const user = await newUser.findOne({ _id: req.params.id }).populate("posts")
-
+        const user = await newUser.findOne({ _id: req.params.id }).populate(
+            [{
+                path: 'posts',
+                model: 'posts',
+                populate: { path: "comments", populate: { path: "users", select: 'username image createdAt' } }
+            }
+            ]
+        )
         if (user) {
             return res.status(201).json(user);
         }
@@ -128,6 +134,7 @@ userRouter.get("/:id", async (req, res) => {
 userRouter.put('/update/friend/:id', verifyToken, upload.single("image"), async (req, res) => {
     try {
         const updateUser = await newUser.findByIdAndUpdate({ _id: req.params.id }, { $addToSet: { friends: req.body.friendId } }, { new: true });
+
         if (updateUser) {
             return res.status(201).json({ success: "user updated", updateUser });
         }

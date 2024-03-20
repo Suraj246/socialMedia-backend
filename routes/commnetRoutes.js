@@ -17,7 +17,7 @@ commentRoutes.post("/create/comment/", async (req, res) => {
         if (newComment) {
             const storeUser = await comment.findOneAndUpdate({ _id: newComment._id }, { $addToSet: { users: userId } })
             if (storeUser) {
-                return res.status(201).json({ success: "user stored", newComment });
+                return res.status(201).json({ success: "comment created", newComment });
             }
             else {
                 return res.status(201).json({ success: "could not find the user" });
@@ -38,8 +38,22 @@ commentRoutes.put("/comment/:id", async (req, res) => {
     try {
         const storeComments = await posts.updateOne({ _id: req.params.id }, { $addToSet: { comments: commentId } })
 
+
+
         if (storeComments) {
-            return res.status(201).json({ success: "commented" });
+            const updatedPostComments = await posts.find({})
+                .populate([{
+                    path: 'user',
+                    model: 'user'
+                },
+                {
+                    path: 'comments',
+                    model: 'comment',
+                    populate: { path: "users", select: 'username image createdAt' }
+
+                }
+                ])
+            return res.status(201).json({ success: "commented stored in post", updatedPostComments });
         }
 
     } catch (err) {
