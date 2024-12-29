@@ -72,7 +72,7 @@ userRouter.post("/email_validation", async (req, res) => {
     if (!email) {
         return res.status(400).json({ message: "Email is required" });
     }
-    const API = "https://social-media-backend-7uko.onrender.com"
+    const API = "https://social-nu-olive.vercel.app"
     // const API = "http://localhost:3000"
     const resetLink = `${API}/reset_password?email=${encodeURIComponent(email)}`;
     const transporter = nodemailer.createTransport({
