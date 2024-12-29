@@ -5,6 +5,12 @@ import multer from "multer";
 import verifyToken from '../middleware/auth.js';
 const upload = multer({ dest: "uploads/" })
 import mongoose from 'mongoose'
+import dotenv from "dotenv";
+
+import nodemailer from 'nodemailer'
+dotenv.config({ path: "./config.env" });
+
+
 
 // user signup
 userRouter.post("/signup", async (req, res) => {
@@ -57,6 +63,79 @@ userRouter.post("/login", async (req, res) => {
         }
     } catch (err) {
         res.send({ message: err });
+    }
+});
+
+// forgot password
+userRouter.post("/email_validation", async (req, res) => {
+    const { email } = req.body;
+    if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+    }
+    const API = "https://social-media-backend-7uko.onrender.com"
+    // const API = "http://localhost:3000"
+    const resetLink = `${API}/reset_password?email=${encodeURIComponent(email)}`;
+    const transporter = nodemailer.createTransport({
+        service: "gmail",
+        secure: true,
+        port: 465,
+        auth: {
+            user: process.env.EMAIL,
+            pass: process.env.PASSWORD,
+        },
+    });
+
+    try {
+        const user = await newUser.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: "Email does not exist" });
+        }
+        // Send reset email
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to: email,
+            subject: "Reset Password",
+            text: `Hello ${user.username},\n\nYour account information:\nUsername: ${user.username}\nLocation: ${user.location}\n\nClick the link below to reset your password:\n${resetLink}`,
+            html: `<p>Hello <b>${user.username}</b>,</p>
+                   <p>Your reset password link:</p>
+                   <a href="${resetLink}">${resetLink}</a>`,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log("Reset email sent to:", email);
+
+        return res.status(200).json({ message: "Email sent successfully", userid: user._id });
+
+    } catch (error) {
+        console.error("Error occurred:", error);
+        return res.status(500).json({ message: "Internal server error", error });
+    }
+});
+
+
+
+//reset password
+userRouter.put("/reset_password/:id", async (req, res) => {
+    const { newPassword } = req.body;
+
+    if (!newPassword) {
+        return res.status(400).json({ message: "new password is required" });
+    }
+    try {
+        if (newPassword) {
+            const updatedUser = await newUser.findByIdAndUpdate(
+                { _id: req.params.id },
+                { password: newPassword },
+                { new: true }
+            );
+
+            return res.status(200).json({ message: "password updated" });
+
+        }
+
+    } catch (error) {
+        console.error("Error occurred:", error);
+        return res.status(500).json({ message: "Internal server error", error });
     }
 });
 
