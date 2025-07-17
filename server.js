@@ -27,8 +27,6 @@ mongoose.connect(process.env.DATABASE)
     .catch(err => console.log(`> Error while connecting to mongoDB : ${err.message}`.underline.bgRed))
 
 
-
-
 // routes
 app.use("/user", userRouter)
 app.use("/user/posts", verifyToken, postRoutes)
